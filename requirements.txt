@@ -1,0 +1,33 @@
+# --- Core ML stack ---
+# Install PyTorch separately for your CUDA (or use RunPod/Azure base image).
+# Example (CUDA 12.x): pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision
+transformers==4.51.3
+accelerate>=0.33.0
+huggingface-hub>=0.23.0
+safetensors>=0.4.2
+sentencepiece>=0.2.0
+datasets>=2.19.0
+evaluate>=0.4.1
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# --- Viz / monitoring ---
+matplotlib>=3.8.0
+tqdm>=4.66.0
+psutil>=5.9.0
+
+# --- Azure SDK (Cosmos, Identity, Key Vault Secrets) ---
+azure-cosmos>=4.6.0
+azure-identity>=1.17.0
+azure-keyvault-secrets>=4.8.0
+
+# --- Orchestration / infra ---
+runpod>=1.7.0
+python-dotenv>=1.0.1
+pyyaml>=6.0.1
+requests>=2.31.0
+
+# --- Notebooks / testing (lightweight, optional but practical) ---
+ipykernel>=6.29.0
+pytest>=8.0.0
