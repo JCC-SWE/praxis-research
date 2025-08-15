@@ -40,7 +40,8 @@ def get_secrets():
             'serp-api-key': client.get_secret('serp-api-key').value,
             'cosmos-conn-string':client.get_secret('cosmos-conn-string').value,
             'cosmos-key': client.get_secret('cosmos-key').value,
-            'cosmos-uri': client.get_secret('cosmos-uri').value
+            'cosmos-uri': client.get_secret('cosmos-uri').value,
+            's-scholar-key': client.get_secret('s-scholar-key').value
         }
         
         return secrets

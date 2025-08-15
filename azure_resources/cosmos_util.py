@@ -53,68 +53,129 @@ class CosmosDB:
         self.database = self.client.get_database_client("cosmos-database")
         self.container = self.database.get_container_client(container_name)
     
-    def read_item(self, item_id, partition_key=None):
-        """Read an item by its ID"""
+    def insert_batch(self, items):
+        """Insert a batch of items into existing database"""
         try:
-            if partition_key is None:
-                partition_key = item_id
+            results = []
+            for item in items:
+                try:
+                    created_item = self.container.create_item(body=item)
+                    results.append(created_item)
+                except Exception as e:
+                    print(f"Failed to insert item {item.get('id', 'unknown')}: {e}")
+                    results.append(None)
             
-            item = self.container.read_item(item=item_id, partition_key=partition_key)
-            print(f"Found item: {item_id}")
-            return item
+            successful = [r for r in results if r is not None]
+            print(f"Successfully inserted {len(successful)} out of {len(items)} items")
+            return results
             
-        except CosmosResourceNotFoundError:
-            print(f"Item '{item_id}' not found")
-            return None
         except Exception as e:
-            print(f"Error reading item: {e}")
-            return None
+            print(f"Error in batch insert: {e}")
+            return []
     
-    def update_item(self, item_id, updates, partition_key=None):
-        """Update an existing item"""
+    def read_batch(self, item_ids):
+        """Read a batch of items by their IDs"""
         try:
-            if partition_key is None:
-                partition_key = item_id
-                
-            # Read existing item
-            existing_item = self.read_item(item_id, partition_key)
-            if not existing_item:
-                return None
+            results = []
+            for item_id in item_ids:
+                try:
+                    item = self.container.read_item(item=item_id, partition_key=item_id)
+                    results.append(item)
+                except CosmosResourceNotFoundError:
+                    print(f"Item '{item_id}' not found")
+                    results.append(None)
+                except Exception as e:
+                    print(f"Error reading item {item_id}: {e}")
+                    results.append(None)
             
-            # Apply updates
-            existing_item.update(updates)
-            
-            # Replace the item
-            updated_item = self.container.replace_item(
-                item=item_id,
-                body=existing_item
-            )
-            print(f"Updated item: {item_id}")
-            return updated_item
+            successful = [r for r in results if r is not None]
+            print(f"Successfully read {len(successful)} out of {len(item_ids)} items")
+            return results
             
         except Exception as e:
-            print(f"Error updating item: {e}")
-            return None
+            print(f"Error in batch read: {e}")
+            return []
     
-    def delete_item(self, item_id, partition_key=None):
-        """Delete an item by its ID"""
+    def read_all(self):
+        """Read all objects from the container"""
         try:
-            if partition_key is None:
-                partition_key = item_id
-                
-            self.container.delete_item(item=item_id, partition_key=partition_key)
-            print(f"Deleted item: {item_id}")
-            return True
+            items = list(self.container.query_items(
+                query="SELECT * FROM c",
+                enable_cross_partition_query=True
+            ))
+            print(f"Read {len(items)} items")
+            return items
             
-        except CosmosResourceNotFoundError:
-            print(f"Item '{item_id}' not found")
-            return False
         except Exception as e:
-            print(f"Error deleting item: {e}")
-            return False
-        
+            print(f"Error reading all items: {e}")
+            return []
+    
+    def update_batch(self, updates):
+        """Update a batch of items. updates should be list of dicts with 'id' and update fields"""
+        try:
+            results = []
+            for update_data in updates:
+                item_id = update_data.get('id')
+                if not item_id:
+                    print("Update data missing 'id' field")
+                    results.append(None)
+                    continue
+                
+                try:
+                    # Read existing item
+                    existing_item = self.container.read_item(item=item_id, partition_key=item_id)
+                    # Apply updates
+                    existing_item.update(update_data)
+                    # Replace the item
+                    updated_item = self.container.replace_item(item=item_id, body=existing_item)
+                    results.append(updated_item)
+                except Exception as e:
+                    print(f"Failed to update item {item_id}: {e}")
+                    results.append(None)
+            
+            successful = [r for r in results if r is not None]
+            print(f"Successfully updated {len(successful)} out of {len(updates)} items")
+            return results
+            
+        except Exception as e:
+            print(f"Error in batch update: {e}")
+            return []
+    
+    def delete_batch(self, item_ids):
+        """Delete a batch of items by their IDs"""
+        try:
+            results = []
+            for item_id in item_ids:
+                try:
+                    self.container.delete_item(item=item_id, partition_key=item_id)
+                    results.append(True)
+                    print(f"Deleted item: {item_id}")
+                except CosmosResourceNotFoundError:
+                    print(f"Item '{item_id}' not found")
+                    results.append(False)
+                except Exception as e:
+                    print(f"Error deleting item {item_id}: {e}")
+                    results.append(False)
+            
+            successful = sum(results)
+            print(f"Successfully deleted {successful} out of {len(item_ids)} items")
+            return results
+            
+        except Exception as e:
+            print(f"Error in batch delete: {e}")
+            return []
+
 if __name__ == "__main__":
-    db = CosmosDB()
-    item = db.read_item("your-item-id")
-    if item:
-        print(json.dumps(item, indent=2))
+    try:
+        # Verify connection and list containers
+        db = CosmosDB()
+        print("✓ Connection successful")
+        
+        # List all containers in the database
+        containers = list(db.database.list_containers())
+        print(f"✓ Found {len(containers)} containers:")
+        for container in containers:
+            print(f"  - {container['id']}")
+            
+    except Exception as e:
+        print(f"✗ Connection failed: {e}")
