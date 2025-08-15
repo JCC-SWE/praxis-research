@@ -105,9 +105,9 @@ def batch_get_arxiv_to_cosmos(search_query="machine learning", total_limit=5000,
 if __name__ == "__main__":
     batch_get_arxiv_to_cosmos(
         search_query="machine learning",
-        total_limit=10,
-        batch_size=10,
-        container_name="arxiv_container",
-        start_date="2025-01-01",
-        end_date="2025-03-31"
+        total_limit=1000,
+        batch_size=100,
+        container_name="s_scholar_container",
+        start_date="2025-04-30",
+        end_date="2025-07-31"
     )

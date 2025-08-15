@@ -131,6 +131,6 @@ if __name__ == "__main__":
     fetch_semanticscholar_batch_to_cosmos(
         topics=['machine learning', 'artificial intelligence'],
         limit=10,
-        year_range=('01-2025', '07-2025'),
+        year_range=('07-2025', '08-2025'),
         container_name="s_scholar_container"
     )
