@@ -48,20 +48,30 @@ class CustomDataCollator:
         }
 
 class QwenDataLoader:
-    def __init__(self, processed_data_path="qwen_processed_data.pkl", train_split=0.8, batch_size=4, max_length=1024):
+    def __init__(self, processed_data_path="qwen_processed_data.pkl", 
+                 train_split=0.7, val_split=0.2, test_split=0.1, 
+                 batch_size=4, max_length=1024):
         """
-        Initialize data loader for Qwen training.
+        Initialize data loader for Qwen training with train/val/test splits.
         
         Args:
             processed_data_path (str): Path to processed pickle file
-            train_split (float): Proportion for training (rest goes to validation)
+            train_split (float): Proportion for training 
+            val_split (float): Proportion for validation
+            test_split (float): Proportion for testing
             batch_size (int): Batch size for training
             max_length (int): Maximum sequence length
         """
         self.processed_data_path = processed_data_path
         self.train_split = train_split
+        self.val_split = val_split
+        self.test_split = test_split
         self.batch_size = batch_size
         self.max_length = max_length
+        
+        # Validate splits sum to 1.0
+        if abs(train_split + val_split + test_split - 1.0) > 0.001:
+            raise ValueError(f"Splits must sum to 1.0. Got: {train_split + val_split + test_split}")
         
         # Load processed data
         self.dataset, self.metadata = self._load_processed_data()
@@ -71,8 +81,8 @@ class QwenDataLoader:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # Create train/val splits
-        self.train_dataset, self.val_dataset = self._create_splits()
+        # Create train/val/test splits
+        self.train_dataset, self.val_dataset, self.test_dataset = self._create_splits()
         
         # Create custom data collator
         self.data_collator = CustomDataCollator(
@@ -101,13 +111,16 @@ class QwenDataLoader:
         return dataset, metadata
     
     def _create_splits(self):
-        """Create train/validation splits."""
+        """Create train/validation/test splits."""
         total_size = len(self.dataset)
         train_size = int(total_size * self.train_split)
+        val_size = int(total_size * self.val_split)
+        test_size = total_size - train_size - val_size  # Remaining goes to test
         
-        # Split the dataset
+        # Create non-overlapping splits
         train_dataset = self.dataset.select(range(train_size))
-        val_dataset = self.dataset.select(range(train_size, total_size))
+        val_dataset = self.dataset.select(range(train_size, train_size + val_size))
+        test_dataset = self.dataset.select(range(train_size + val_size, total_size))
         
         # Remove non-tensor columns before training
         # Keep only the columns needed for language modeling
@@ -118,6 +131,7 @@ class QwenDataLoader:
             print(f"🗑️ Removing metadata columns: {columns_to_remove}")
             train_dataset = train_dataset.remove_columns(columns_to_remove)
             val_dataset = val_dataset.remove_columns(columns_to_remove)
+            test_dataset = test_dataset.remove_columns(columns_to_remove)
         
         # Fix any data type issues - ensure all fields are proper lists of integers
         def fix_data_types(examples):
@@ -135,13 +149,15 @@ class QwenDataLoader:
         
         train_dataset = train_dataset.map(fix_data_types, batched=True)
         val_dataset = val_dataset.map(fix_data_types, batched=True)
+        test_dataset = test_dataset.map(fix_data_types, batched=True)
         
         print(f"📊 Dataset splits:")
-        print(f"  Training: {len(train_dataset)} samples ({self.train_split*100:.1f}%)")
-        print(f"  Validation: {len(val_dataset)} samples ({(1-self.train_split)*100:.1f}%)")
+        print(f"  Training: {len(train_dataset)} samples ({self.train_split:.1%})")
+        print(f"  Validation: {len(val_dataset)} samples ({self.val_split:.1%})")
+        print(f"  Test: {len(test_dataset)} samples ({self.test_split:.1%})")
         print(f"  Columns: {train_dataset.column_names}")
         
-        return train_dataset, val_dataset
+        return train_dataset, val_dataset, test_dataset
     
     def get_train_dataloader(self, shuffle=True):
         """Get training DataLoader."""
@@ -165,12 +181,27 @@ class QwenDataLoader:
             pin_memory=True if torch.cuda.is_available() else False
         )
     
+    def get_test_dataloader(self, shuffle=False):
+        """Get test DataLoader."""
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=shuffle,
+            collate_fn=self.data_collator,
+            num_workers=0,
+            pin_memory=True if torch.cuda.is_available() else False
+        )
+    
     def get_sample_batch(self, split='train'):
         """Get a sample batch for testing."""
         if split == 'train':
             dataloader = self.get_train_dataloader()
-        else:
+        elif split == 'val':
             dataloader = self.get_val_dataloader()
+        elif split == 'test':
+            dataloader = self.get_test_dataloader()
+        else:
+            raise ValueError(f"Invalid split: {split}. Must be 'train', 'val', or 'test'")
         
         batch = next(iter(dataloader))
         return batch
@@ -206,7 +237,10 @@ class QwenDataLoader:
             'total_samples': len(self.dataset),
             'train_samples': len(self.train_dataset),
             'val_samples': len(self.val_dataset),
+            'test_samples': len(self.test_dataset),
             'train_split': self.train_split,
+            'val_split': self.val_split,
+            'test_split': self.test_split,
             'batch_size': self.batch_size,
             'max_length': self.max_length,
             'tokenizer': self.metadata['tokenizer_name'],
@@ -218,10 +252,12 @@ def test_dataloader(processed_data_path="qwen_processed_data.pkl"):
     """Test the data loader functionality."""
     print("🧪 Testing DataLoader...")
     
-    # Initialize data loader
+    # Initialize data loader with train/val/test splits
     loader = QwenDataLoader(
         processed_data_path=processed_data_path,
-        train_split=0.8,
+        train_split=0.7,
+        val_split=0.2,
+        test_split=0.1,
         batch_size=2,  # Small batch for testing
         max_length=1024
     )
@@ -246,6 +282,11 @@ def test_dataloader(processed_data_path="qwen_processed_data.pkl"):
     print(f"\n🔄 Testing validation dataloader...")
     val_batch = loader.get_sample_batch('val')
     loader.print_batch_info(val_batch)
+    
+    # Test test dataloader
+    print(f"\n🔄 Testing test dataloader...")
+    test_batch = loader.get_sample_batch('test')
+    loader.print_batch_info(test_batch)
     
     print(f"\n✅ DataLoader test complete!")
     return loader
