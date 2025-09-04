@@ -1,0 +1,12 @@
+# model/cache artifacts (never commit)
+phase1_model_instantiation/models/
+**/models/
+**/checkpoints/
+**/.cache/
+**/cache/
+**/__pycache__/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.ckpt
