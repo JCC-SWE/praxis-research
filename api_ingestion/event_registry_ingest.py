@@ -1,146 +1,169 @@
-import subprocess
-import sys
+import urllib.request
+import urllib.parse
+import json
 import time
+import sys
 import os
 import hashlib
 from datetime import datetime as dt
-
-# Install eventregistry if not available
-try:
-    from eventregistry import *
-except ImportError:
-    print("📦 Installing eventregistry...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "eventregistry"])
-    from eventregistry import *
-    print("✅ eventregistry installed successfully")
 
 # Add cosmos_util path and import CosmosDB
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 cosmos_util_path = os.path.join(parent_dir, 'azure_resources')
 sys.path.insert(0, cosmos_util_path)
-from cosmos_util import CosmosDB
+from cosmos_util import CosmosDB 
 from keyvault_client import get_secrets
+
+# High-Level AI Topics for Event Registry (15 max)
+AI_TOPICS = [
+    "large language models",
+    "neural networks", 
+    "deep learning",
+    "computer vision",
+    "natural language processing",
+    "reinforcement learning",
+    "AI safety",
+    "AI alignment",
+    "transformer models",
+    "AI ethics",
+    "robotics AI",
+    "AI drug discovery",
+    "federated learning",
+    "multimodal AI",
+    "AI benchmarking"
+]
 
 def title_to_hash(title):
     """Convert title to SHA256 hash for use as ID"""
     return hashlib.sha256(title.encode('utf-8')).hexdigest()
 
-def get_api_key():
-    """Retrieve Event Registry API key from secrets"""
-    try:
-        secrets = get_secrets()
-        api_key = secrets.get('event-registry')
-        if not api_key:
-            print("❌ 'event-registry' key not found in secrets")
-            return None
-        return api_key
-    except Exception as e:
-        print(f"❌ Error retrieving API key: {e}")
-        return None
-
-def fetch_eventregistry_to_cosmos(keywords=None, max_items=100, date_range=None, 
-                                 container_name="event_registry", delay_seconds=1):
+def fetch_semanticscholar_batch_to_cosmos_multi_topic(topics=None, papers_per_topic=100, 
+                                                     year_range=None, container_name="s_scholar_container", 
+                                                     delay_seconds=2):
     """
-    Fetch articles from Event Registry using official package and insert into CosmosDB.
+    Fetch papers from Semantic Scholar for multiple topics using API key and insert into CosmosDB.
     
     Args:
-        keywords (list): List of keywords to search for
-        max_items (int): Maximum number of articles to fetch
-        date_range (tuple): (start_date, end_date) in 'YYYY-MM-DD' format
+        topics (list): List of search topics/queries (defaults to AI_TOPICS)
+        papers_per_topic (int): Papers per topic (max 1000)
+        year_range (tuple): (start, end) e.g. ('01-2020', '12-2024') or (2020, 2024)
         container_name (str): CosmosDB container name
-        delay_seconds (float): Delay before API call
+        delay_seconds (float): Delay between topic queries
     """
-    # Get API key and initialize Event Registry
-    api_key = get_api_key()
-    if not api_key:
-        return False
+    if topics is None:
+        topics = AI_TOPICS
     
-    er = EventRegistry(api_key)
+    # Get API key from secrets
+    secrets = get_secrets()
+    api_key = secrets.get('s-scholar-key')  # Assuming this is the Semantic Scholar key
+
+    if not api_key:
+        print("❌ No API key found in secrets")
+        return False
     
     # Initialize CosmosDB connection
     db = CosmosDB(container_name=container_name)
     
-    # Default keywords if none provided
-    if keywords is None:
-        keywords = ["Artificial Intelligence", "Generative AI", "Machine Learning", "Deep Learning"]
+    print(f"🚀 Starting multi-topic Semantic Scholar ingest to {container_name}")
+    print(f"Topics: {len(topics)} topics")
+    print(f"Papers per topic: {papers_per_topic}")
+    print(f"Year range: {year_range}")
+    print(f"Expected total papers: ~{len(topics) * papers_per_topic}")
     
-    print(f"🔍 Fetching {max_items} articles from Event Registry")
-    print(f"💾 Target container: {container_name}")
-    print(f"🔎 Keywords: {', '.join(keywords)}")
+    total_retrieved = 0
+    total_inserted = 0
     
-    if delay_seconds > 0:
-        time.sleep(delay_seconds)
-    
-    try:
-        # Build query using Event Registry package
-        query_params = {
-            'keywords': QueryItems.OR(keywords),
-            'dataType': ["news", "blog"],
-            'lang': ["eng"]
-        }
+    for topic_idx, topic in enumerate(topics, 1):
+        print(f"\n📚 Processing topic {topic_idx}/{len(topics)}: '{topic}'")
         
-        # Add date range if provided
-        if date_range:
-            query_params['dateStart'] = date_range[0]
-            query_params['dateEnd'] = date_range[1]
-        
-        q = QueryArticlesIter(**query_params)
-        
-        # Fetch articles
-        articles = []
-        for art in q.execQuery(er, sortBy="date", maxItems=max_items):
-            articles.append(art)
-        
-        print(f"📄 Retrieved {len(articles)} articles")
-        
-        if not articles:
-            print("⚠️ No articles found")
-            return False
-        
-        # Convert to CosmosDB format
-        cosmos_articles = []
-        for art in articles:
-            title = art.get('title', '').strip()
-            if not title:
-                continue
+        try:
+            time.sleep(delay_seconds)
             
-            record = {
-                'id': title_to_hash(title),
-                'event_registry_uri': art.get('uri'),
-                'title': title,
-                'body': art.get('body', ''),
-                'summary': art.get('summary', ''),
-                'url': art.get('url'),
-                'source': art.get('source', {}).get('title', 'Unknown') if art.get('source') else 'Unknown',
-                'authors': art.get('authors', []),
-                'date': art.get('date'),
-                'datetime': art.get('dateTime'),
-                'language': art.get('lang'),
-                'country': art.get('location', {}).get('country', {}).get('label') if art.get('location') else None,
-                'sentiment': art.get('sentiment'),
-                'duplicate_group_id': art.get('duplicateGroupId'),
-                'keywords': keywords,
-                'ingested_at': dt.utcnow().isoformat()
+            # Use bulk search endpoint with API key
+            base_url = 'https://api.semanticscholar.org/graph/v1/paper/search/bulk'
+            params = {
+                'query': topic,
+                'offset': 0,
+                'limit': min(papers_per_topic, 1000),  # Max 1000 per call
+                'fields': 'title,abstract,authors,year,url,venue,externalIds,citationCount,paperId'
             }
-            cosmos_articles.append(record)
-        
-        # Insert batch into CosmosDB
-        print(f"💾 Inserting {len(cosmos_articles)} articles into {container_name}")
-        results = db.insert_batch(cosmos_articles)
-        successful_inserts = len([r for r in results if r is not None])
-        
-        print(f"✅ Successfully inserted {successful_inserts} out of {len(cosmos_articles)} articles")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return False
+            
+            # Add year filter if provided
+            if year_range:
+                if isinstance(year_range[0], str) and '-' in year_range[0]:
+                    # Extract years from MM-YYYY format
+                    start_year = year_range[0].split('-')[1]
+                    end_year = year_range[1].split('-')[1]
+                    params['year'] = f"{start_year}-{end_year}"
+                else:
+                    params['year'] = f"{year_range[0]}-{year_range[1]}"
+            
+            url = f"{base_url}?{urllib.parse.urlencode(params)}"
+            
+            headers = {
+                'User-Agent': 'Python-Research-Agent/1.0',
+                'x-api-key': api_key
+            }
+            
+            request = urllib.request.Request(url, headers=headers)
+            response = urllib.request.urlopen(request, timeout=30)
+            json_data = json.loads(response.read().decode('utf-8'))
+            
+            papers = json_data.get('data', [])
+            topic_papers = []
+            
+            # Convert to CosmosDB format
+            for paper in papers:
+                title = paper.get('title', '').strip()
+                if not title:
+                    continue
+                    
+                authors = [author.get('name') for author in paper.get('authors', []) if author.get('name')]
+                
+                record = {
+                    'id': title_to_hash(title),
+                    'paper_id': paper.get('paperId'),
+                    'title': title,
+                    'abstract': paper.get('abstract', ''),
+                    'authors': authors,
+                    'year': paper.get('year'),
+                    'venue': paper.get('venue'),
+                    'citation_count': paper.get('citationCount', 0),
+                    'url': paper.get('url'),
+                    'external_ids': paper.get('externalIds', {}),
+                    'doi': paper.get('externalIds', {}).get('DOI'),
+                    'topic': topic,
+                    'ingested_at': dt.utcnow().isoformat()
+                }
+                topic_papers.append(record)
+            
+            # Insert batch into CosmosDB
+            if topic_papers:
+                results = db.insert_batch(topic_papers)
+                successful_inserts = len([r for r in results if r is not None])
+                
+                total_retrieved += len(topic_papers)
+                total_inserted += successful_inserts
+                
+                print(f"  📄 Found: {len(topic_papers)} papers | Inserted: {successful_inserts}")
+            else:
+                print(f"  ⚠️ No papers found for '{topic}'")
+                
+        except Exception as e:
+            print(f"  ❌ Error fetching '{topic}': {e}")
+    
+    print(f"\n📦 FINAL SUMMARY:")
+    print(f"📚 Topics processed: {len(topics)}")
+    print(f"📄 Total papers retrieved: {total_retrieved}")
+    print(f"💾 Total papers inserted: {total_inserted}")
+    
+    return total_inserted > 0
 
 if __name__ == "__main__":
-    fetch_eventregistry_to_cosmos(
-        keywords=["artificial intelligence", "machine learning", "deep learning"],
-        max_items=500,
-        date_range=('2025-01-01', '2025-07-31'),
+    fetch_semanticscholar_batch_to_cosmos_multi_topic(
+        topics=AI_TOPICS,  # Use all AI topics, or pass custom list
+        papers_per_topic=20000,  # Fetch up to 400 papers per topic
+        year_range=('01-2025', '09-2025'),
         container_name="s_scholar_container"
     )

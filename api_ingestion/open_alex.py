@@ -185,9 +185,90 @@ def fetch_openalex_batch_to_cosmos(search_terms=None, total_papers=100, batch_si
 
 if __name__ == "__main__":
     fetch_openalex_batch_to_cosmos(
-        search_terms=["machine learning", "artificial intelligence"],
-        total_papers=1000,
+        search_terms=[# Next-Gen AI Architectures
+    "multimodal AI",
+    "cross-modal learning",
+    "vision-language models",
+    "AI foundation models",
+    "AI model scaling",
+    "mixture of experts",
+    "AI retrieval augmented generation",
+    "AI in-context learning",
+    "AI prompt engineering",
+    "AI instruction tuning",
+    
+    # AI Reasoning & Planning
+    "AI logical reasoning",
+    "AI causal inference",
+    "AI symbolic reasoning",
+    "AI planning algorithms",
+    "AI decision making",
+    "AI problem solving",
+    "AI common sense reasoning",
+    "AI spatial reasoning",
+    "AI temporal reasoning",
+    
+    # Advanced AI Training
+    "AI curriculum learning",
+    "AI multi-task learning",
+    "AI domain adaptation",
+    "AI lifelong learning",
+    "AI catastrophic forgetting",
+    "AI neural plasticity",
+    "AI replay methods",
+    "AI memory networks",
+    
+    # AI Evaluation & Benchmarking
+    "AI evaluation metrics",
+    "AI benchmark datasets",
+    "AI performance analysis",
+    "AI model comparison",
+    "AI stress testing",
+    "AI robustness evaluation",
+    "AI generalization assessment",
+    
+    # Specialized AI Applications
+    "AI creative writing",
+    "AI code generation",
+    "AI mathematical reasoning",
+    "AI scientific discovery",
+    "AI theorem proving",
+    "AI data synthesis",
+    "AI simulation",
+    "AI virtual environments",
+    
+    # AI Infrastructure & Deployment
+    "AI model optimization",
+    "AI quantization",
+    "AI pruning",
+    "AI knowledge distillation",
+    "AI edge deployment",
+    "AI mobile AI",
+    "AI real-time inference",
+    "AI latency optimization",
+    
+    # Human-Centric AI
+    "AI accessibility",
+    "AI inclusive design",
+    "AI cultural sensitivity",
+    "AI bias mitigation",
+    "AI fairness metrics",
+    "AI human feedback",
+    "AI user experience",
+    "AI trust and reliability",
+    
+    # Future AI Concepts
+    "artificial general intelligence",
+    "AI consciousness",
+    "AI self-improvement",
+    "AI recursive improvement",
+    "AI goal alignment",
+    "AI value learning",
+    "AI cooperative AI",
+    "AI multi-agent coordination"
+],
+        total_papers=50000,
         batch_size=200,
-        year_range=('01-2025', '07-2025'),  # MM-YYYY format
+        year_range=('01-2025', '09-2025'),  # MM-YYYY format
         container_name="s_scholar_container"
     )
