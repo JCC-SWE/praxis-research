@@ -15,22 +15,146 @@ sys.path.insert(0, cosmos_util_path)
 from cosmos_util import CosmosDB 
 from keyvault_client import get_secrets
 
+# Third batch of AI-related topics
+AI_TOPICS = [
+    "artificial intelligence",
+    "machine learning",
+    "deep learning",
+    "neural networks",
+    "computer vision",
+    "natural language processing",
+    "reinforcement learning",
+    "supervised learning",
+    "unsupervised learning",
+    "convolutional neural networks",
+    "recurrent neural networks",
+    "transformer models",
+    "generative adversarial networks",
+    "large language models",
+    "artificial neural networks",
+    "pattern recognition",
+    "data mining",
+    "robotics",
+    "expert systems",
+    "knowledge representation",
+    "automated reasoning",
+    "speech recognition",
+    "image processing",
+    "facial recognition",
+    "object detection",
+    "semantic segmentation",
+    "transfer learning",
+    "federated learning",
+    "adversarial examples",
+    "explainable AI",
+    "AI ethics",
+    "automated machine learning",
+    "multi-agent systems",
+    "swarm intelligence",
+    "evolutionary algorithms",
+    "genetic algorithms",
+    "fuzzy logic",
+    "Bayesian networks",
+    "support vector machines",
+    "random forests",
+    "ensemble methods",
+    "clustering algorithms",
+    "dimensionality reduction",
+    "feature selection",
+    "optimization algorithms",
+    "gradient descent",
+    "backpropagation",
+    "attention mechanisms",
+    "BERT",
+    "GPT",
+    "variational autoencoders",
+    "graph neural networks",
+    "few-shot learning",
+    "zero-shot learning",
+    "meta-learning",
+    "continual learning",
+    "active learning",
+    "semi-supervised learning",
+    "self-supervised learning",
+    "contrastive learning"
+
+
+"autonomous vehicles",
+    "medical AI",
+    "healthcare artificial intelligence",
+    "financial technology",
+    "algorithmic trading",
+    "fraud detection",
+    "recommendation systems",
+    "search engines",
+    "chatbots",
+    "virtual assistants",
+    
+    # Emerging AI Areas
+    "quantum machine learning",
+    "neuromorphic computing", 
+    "edge computing AI",
+    "AI accelerators",
+    "brain-computer interfaces",
+    "augmented reality AI",
+    "AI for climate change",
+    "sustainable AI",
+    "green computing",
+    
+    # AI Infrastructure & Systems
+    "distributed machine learning",
+    "model compression",
+    "neural architecture search",
+    "hyperparameter optimization",
+    "MLOps",
+    "AI deployment",
+    "model serving",
+    "AI benchmarking",
+    
+    # Interdisciplinary AI
+    "computational biology",
+    "bioinformatics",
+    "computational chemistry",
+    "AI for materials science",
+    "digital humanities",
+    "educational technology",
+    "AI for agriculture",
+    "smart cities",
+    "IoT artificial intelligence",
+    
+    # AI Safety & Society
+    "AI alignment",
+    "AI safety",
+    "algorithmic bias",
+    "AI governance",
+    "privacy preserving AI",
+    "differential privacy",
+    "homomorphic encryption AI",
+    "AI interpretability",
+    "AI transparency"
+
+]
+
 def title_to_hash(title):
     """Convert title to SHA256 hash for use as ID"""
     return hashlib.sha256(title.encode('utf-8')).hexdigest()
 
-def fetch_semanticscholar_batch_to_cosmos(topics=['artificial intelligence'], limit=100, 
-                                         year_range=None, container_name="s_scholar_container", delay_seconds=2):
+def fetch_semanticscholar_batch_to_cosmos_multi_topic(topics=None, papers_per_topic=100, 
+                                                     year_range=None, container_name="s_scholar_container", 
+                                                     delay_seconds=2):
     """
-    Fetch papers from Semantic Scholar using API key and insert into CosmosDB.
+    Fetch papers from Semantic Scholar for multiple topics using API key and insert into CosmosDB.
     
     Args:
-        topics (list): List of search topics/queries
-        limit (int): Papers per topic (max 1000)
+        topics (list): List of search topics/queries (defaults to AI_TOPICS)
+        papers_per_topic (int): Papers per topic (max 1000)
         year_range (tuple): (start, end) e.g. ('01-2020', '12-2024') or (2020, 2024)
         container_name (str): CosmosDB container name
         delay_seconds (float): Delay between topic queries
     """
+    if topics is None:
+        topics = AI_TOPICS
+    
     # Get API key from secrets
     secrets = get_secrets()
     api_key = secrets.get('s-scholar-key')  # Assuming this is the Semantic Scholar key
@@ -42,13 +166,17 @@ def fetch_semanticscholar_batch_to_cosmos(topics=['artificial intelligence'], li
     # Initialize CosmosDB connection
     db = CosmosDB(container_name=container_name)
     
-    print(f"🔍 Fetching {limit} papers each for {len(topics)} topics")
-    print(f"💾 Target container: {container_name}")
+    print(f"🚀 Starting multi-topic Semantic Scholar ingest to {container_name}")
+    print(f"Topics: {len(topics)} topics")
+    print(f"Papers per topic: {papers_per_topic}")
+    print(f"Year range: {year_range}")
+    print(f"Expected total papers: ~{len(topics) * papers_per_topic}")
     
-    all_papers = []
+    total_retrieved = 0
+    total_inserted = 0
     
-    for topic in topics:
-        print(f"  📄 Processing: '{topic}'")
+    for topic_idx, topic in enumerate(topics, 1):
+        print(f"\n📚 Processing topic {topic_idx}/{len(topics)}: '{topic}'")
         
         try:
             time.sleep(delay_seconds)
@@ -58,7 +186,7 @@ def fetch_semanticscholar_batch_to_cosmos(topics=['artificial intelligence'], li
             params = {
                 'query': topic,
                 'offset': 0,
-                'limit': min(limit, 1000),  # Max 1000 per call
+                'limit': min(papers_per_topic, 1000),  # Max 1000 per call
                 'fields': 'title,abstract,authors,year,url,venue,externalIds,citationCount,paperId'
             }
             
@@ -84,6 +212,7 @@ def fetch_semanticscholar_batch_to_cosmos(topics=['artificial intelligence'], li
             json_data = json.loads(response.read().decode('utf-8'))
             
             papers = json_data.get('data', [])
+            topic_papers = []
             
             # Convert to CosmosDB format
             for paper in papers:
@@ -108,29 +237,34 @@ def fetch_semanticscholar_batch_to_cosmos(topics=['artificial intelligence'], li
                     'topic': topic,
                     'ingested_at': dt.utcnow().isoformat()
                 }
-                all_papers.append(record)
-                
-            print(f"    ✅ Found {len(papers)} papers")
+                topic_papers.append(record)
             
+            # Insert batch into CosmosDB
+            if topic_papers:
+                results = db.insert_batch(topic_papers)
+                successful_inserts = len([r for r in results if r is not None])
+                
+                total_retrieved += len(topic_papers)
+                total_inserted += successful_inserts
+                
+                print(f"  📄 Found: {len(topic_papers)} papers | Inserted: {successful_inserts}")
+            else:
+                print(f"  ⚠️ No papers found for '{topic}'")
+                
         except Exception as e:
-            print(f"    ❌ Error fetching '{topic}': {e}")
+            print(f"  ❌ Error fetching '{topic}': {e}")
     
-    if not all_papers:
-        print("⚠️ No papers found")
-        return False
+    print(f"\n📦 FINAL SUMMARY:")
+    print(f"📚 Topics processed: {len(topics)}")
+    print(f"📄 Total papers retrieved: {total_retrieved}")
+    print(f"💾 Total papers inserted: {total_inserted}")
     
-    # Insert batch into CosmosDB
-    print(f"💾 Inserting {len(all_papers)} papers into {container_name}")
-    results = db.insert_batch(all_papers)
-    successful_inserts = len([r for r in results if r is not None])
-    
-    print(f"✅ Successfully inserted {successful_inserts} out of {len(all_papers)} papers")
-    return True
+    return total_inserted > 0
 
 if __name__ == "__main__":
-    fetch_semanticscholar_batch_to_cosmos(
-        topics=['machine learning', 'artificial intelligence'],
-        limit=10,
-        year_range=('07-2025', '08-2025'),
+    fetch_semanticscholar_batch_to_cosmos_multi_topic(
+        topics=AI_TOPICS,  # Use all AI topics, or pass custom list
+        papers_per_topic=400,  # Fetch up to 400 papers per topic
+        year_range=('01-2025', '09-2025'),
         container_name="s_scholar_container"
     )
