@@ -11,3 +11,4 @@ phase1_model_instantiation/models/
 *.pth
 *.ckpt
 base-model/
+data/qwen_processed_data.pkl
