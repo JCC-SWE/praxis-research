@@ -167,7 +167,7 @@ def get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/praxis-res
     Returns:
         tuple: (model, tokenizer) - The loaded Qwen model and tokenizer
     """
-    from transformers import AutoModel, AutoTokenizer
+    from transformers import AutoModel, AutoTokenizer, AutoModelForCausalLM
     from pathlib import Path
     
     local_model_path = Path(cache_dir) / model_version
@@ -190,7 +190,7 @@ def get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/praxis-res
     
     try:
         tokenizer = AutoTokenizer.from_pretrained(str(local_model_path))
-        model = AutoModel.from_pretrained(str(local_model_path))
+        model = AutoModelForCausalLM.from_pretrained(str(local_model_path))
         
         # Set pad token if not available
         if tokenizer.pad_token is None:
