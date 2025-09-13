@@ -7,9 +7,9 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'azure_resources'))
 
 # Import data processing modules
-from cosmos_client import get_nlp_ready_data
-from preprocessing import preprocess_for_qwen, get_dataset_stats
-from data_loader import QwenDataLoader
+from .cosmos_client import get_nlp_ready_data
+from .preprocessing import preprocess_for_qwen, get_dataset_stats
+from .data_loader import QwenDataLoader
 
 def create_data_loaders(container_name="s_scholar_container", 
                        model_name="Qwen/Qwen2.5-3B", 

@@ -10,7 +10,7 @@ import torch
 # Add path for cosmos_client
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'azure_resources'))
-from cosmos_client import get_nlp_ready_data, get_combined_nlp_data
+from .cosmos_client import get_nlp_ready_data, get_combined_nlp_data
 
 def clean_text(text):
     """

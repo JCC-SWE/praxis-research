@@ -71,7 +71,7 @@ def load_qwen(model_name: str = "qwen-2.5-3b", local_path: str = "/workspace/mod
     logger.info(f"Loading model from storage: {model_name}")
     
     # Download model from blob storage
-    model_path = download_qwen_model(model_version=model_name, local_path=local_path)
+    model_path = get_qwen_model()
     
     if model_path is None:
         logger.error(f"Failed to download model {model_name}")
