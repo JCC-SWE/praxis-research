@@ -24,10 +24,12 @@ azure-storage-blob>=12.19.0
 # --- Core utilities ---
 python-dotenv>=1.0.1
 requests>=2.31.0
-pyyaml>=6.0.1
+pyyaml>=6.0
+openai>=1.0.0
 
 # --- Platform support ---
 runpod>=1.7.0
+
 
 # --- Dev tools ---
 ipykernel>=6.29.0
