@@ -77,7 +77,7 @@ def upload_qwen_model(model_path, model_version="qwen-2.5-3b"):
         print(f"❌ Error uploading Qwen model {model_version}: {e}")
         return False
 
-def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/models"):
+def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/praxis-research/base-model"):
     """
     Download Qwen model from blob storage to local directory
     
@@ -88,6 +88,20 @@ def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/mode
     Returns:
         str: Path to downloaded model, or None if failed
     """
+    from pathlib import Path
+    
+    # Ensure base local path exists
+    base_path = Path(local_path)
+    base_path.mkdir(parents=True, exist_ok=True)
+    
+    # Check if model already exists locally
+    model_local_path = base_path / model_version
+    
+    # Check if model directory exists and has files
+    if model_local_path.exists() and any(model_local_path.iterdir()):
+        print(f"✅ Model {model_version} already exists locally at {model_local_path}")
+        return str(model_local_path)
+    
     try:
         # Get secrets and connect using existing pattern
         secrets = get_secrets()
@@ -97,7 +111,6 @@ def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/mode
         container_client = blob_service_client.get_container_client(secrets['container'])
         
         # Create local directory
-        model_local_path = Path(local_path) / model_version
         model_local_path.mkdir(parents=True, exist_ok=True)
         
         # List all blobs for this Qwen model
@@ -107,6 +120,8 @@ def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/mode
         if not blobs:
             print(f"❌ No files found for Qwen model {model_version}")
             return None
+        
+        print(f"📥 Downloading model {model_version} from Azure storage...")
         
         downloaded_files = []
         for blob in blobs:
@@ -140,7 +155,7 @@ def download_qwen_model(model_version="qwen-2.5-3b", local_path="/workspace/mode
         print(f"❌ Error downloading Qwen model {model_version}: {e}")
         return None
 
-def get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/model_cache"):
+def get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/praxis-research/base-model"):
     """
     Get Qwen model from local cache or download from blob if not available
     This is the main function your DAPT code should use
@@ -150,23 +165,42 @@ def get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/model_cach
         cache_dir (str): Local cache directory
         
     Returns:
-        str: Path to the model directory
+        tuple: (model, tokenizer) - The loaded Qwen model and tokenizer
     """
+    from transformers import AutoModel, AutoTokenizer
+    from pathlib import Path
+    
     local_model_path = Path(cache_dir) / model_version
     
     # Check if model exists locally and has files
     if local_model_path.exists() and any(local_model_path.iterdir()):
         print(f"✅ Using cached Qwen model at {local_model_path}")
-        return str(local_model_path)
-    
-    # Download from blob
-    print(f"📥 Downloading Qwen model {model_version} from Azure Blob...")
-    downloaded_path = download_qwen_model(model_version, cache_dir)
-    
-    if downloaded_path:
-        return downloaded_path
     else:
-        raise Exception(f"Failed to download Qwen model {model_version}")
+        # Download from blob
+        print(f"📥 Downloading Qwen model {model_version} from Azure Blob...")
+        downloaded_path = download_qwen_model(model_version, cache_dir)
+        
+        if not downloaded_path:
+            raise Exception(f"Failed to download Qwen model {model_version}")
+        
+        local_model_path = Path(downloaded_path)
+    
+    # Load the model and tokenizer
+    print(f"🔄 Loading model and tokenizer from {local_model_path}")
+    
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(str(local_model_path))
+        model = AutoModel.from_pretrained(str(local_model_path))
+        
+        # Set pad token if not available
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        
+        print(f"✅ Successfully loaded Qwen model {model_version}")
+        return model, tokenizer
+        
+    except Exception as e:
+        raise Exception(f"Failed to load model from {local_model_path}: {e}")
 
 def list_qwen_models():
     """
@@ -175,12 +209,8 @@ def list_qwen_models():
     Returns:
         dict: Dictionary of available Qwen models and their info
     """
-    if not KEYVAULT_AVAILABLE:
-        print("❌ Keyvault client not available. Cannot access Azure storage secrets.")
-        return {}
-        
     try:
-        # Get secrets using your existing keyvault_client
+        # Get secrets using your existing get_secrets function
         secrets = get_secrets()
         connection_string = f"DefaultEndpointsProtocol=https;AccountName={secrets['storage_account_name']};AccountKey={secrets['storage_account_key']};EndpointSuffix=core.windows.net"
         
@@ -207,6 +237,7 @@ def list_qwen_models():
         
     except Exception as e:
         print(f"❌ Error listing Qwen models: {e}")
+        print("Make sure you're authenticated with Azure and have access to the storage account")
         return {}
 
 if __name__ == "__main__":

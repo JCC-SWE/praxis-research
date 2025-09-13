@@ -21,7 +21,7 @@ import warnings
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
-
+from model_setup import list_qwen_models
 import numpy as np
 import torch
 from scipy import stats
@@ -64,13 +64,30 @@ def _save_json(obj: dict, path: Path) -> None:
 # -------------------------------------------------------------------
 # Model load
 # -------------------------------------------------------------------
-def load_qwen(model_name: str = "Qwen/Qwen2.5-3B-Instruct"):
+def load_qwen(model_name: str = "qwen-2.5-3b", local_path: str = "/workspace/models"):
     from transformers import AutoModel, AutoTokenizer
-    logger.info(f"Loading model/tokenizer: {model_name}")
-    tok = AutoTokenizer.from_pretrained(model_name)
-    mdl = AutoModel.from_pretrained(model_name)
+    from pathlib import Path
+    
+    logger.info(f"Loading model from storage: {model_name}")
+    
+    # Download model from blob storage
+    model_path = download_qwen_model(model_version=model_name, local_path=local_path)
+    
+    if model_path is None:
+        logger.error(f"Failed to download model {model_name}")
+        raise Exception(f"Failed to download model {model_name} from storage")
+    
+    logger.info(f"Model downloaded to: {model_path}")
+    
+    # Load model and tokenizer from local path
+    logger.info(f"Loading model/tokenizer from: {model_path}")
+    tok = AutoTokenizer.from_pretrained(model_path)
+    mdl = AutoModel.from_pretrained(model_path)
+    
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
+    
+    logger.info(f"Successfully loaded model {model_name}")
     return mdl, tok
 
 
