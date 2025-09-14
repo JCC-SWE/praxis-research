@@ -64,7 +64,7 @@ def _save_json(obj: dict, path: Path) -> None:
 # -------------------------------------------------------------------
 # Model load
 # -------------------------------------------------------------------
-def load_qwen(model_name: str = "qwen-2.5-3b", local_path: str = "/workspace/models"):
+def load_qwen(model_name: str = "qwen-2.5-3b", local_path: str = "/workspace/praxis-research/base-model"):
     from transformers import AutoModel, AutoTokenizer
     from pathlib import Path
     

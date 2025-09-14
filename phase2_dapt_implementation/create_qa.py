@@ -15,7 +15,7 @@ blob_path = os.path.join(parent_dir, 'blob_interface')
 sys.path.insert(0, blob_path)
 
 from upload_to_blob import upload_to_blob
-from openai_client import GPT
+from openai_client import GPT 
 from get_qa_data import get_abstracts_from_blob
 
 def parse_abstracts_text(abstracts_text):
@@ -58,7 +58,7 @@ Answer: [your answer]
 Make the question specific to the research findings or methodology described in the abstract."""
 
         try:
-            response = gpt.ask(prompt, max_tokens=300, temperature=0.7)
+            response = gpt.ask(prompt, max_tokens=500, temperature=0.7)
             
             # Parse the response to extract question and answer
             question = ""
