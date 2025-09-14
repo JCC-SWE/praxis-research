@@ -36,7 +36,7 @@ def get_secrets():
         return {}
 
 class CosmosDB:
-    def __init__(self, container_name="event_registry"):
+    def __init__(self, container_name="s_semantic_scholar"):
         """Initialize Cosmos DB client"""
         secrets = get_secrets()
         
@@ -110,6 +110,29 @@ class CosmosDB:
             print(f"Error reading all items: {e}")
             return []
     
+    def read_limited(self, limit=100, offset=0):
+        """Read a limited number of objects from the container
+        
+        Args:
+            limit (int): Maximum number of records to return (default: 100)
+            offset (int): Number of records to skip (default: 0)
+        
+        Returns:
+            list: List of items from the container
+        """
+        try:
+            query = f"SELECT * FROM c OFFSET {offset} LIMIT {limit}"
+            items = list(self.container.query_items(
+                query=query,
+                enable_cross_partition_query=True
+            ))
+            print(f"Read {len(items)} items (offset: {offset}, limit: {limit})")
+            return items
+            
+        except Exception as e:
+            print(f"Error reading limited items: {e}")
+            return []
+
     def update_batch(self, updates):
         """Update a batch of items. updates should be list of dicts with 'id' and update fields"""
         try:
