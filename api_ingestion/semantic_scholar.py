@@ -14,7 +14,19 @@ cosmos_util_path = os.path.join(parent_dir, 'azure_resources')
 sys.path.insert(0, cosmos_util_path)
 from cosmos_util import CosmosDB 
 from keyvault_client import get_secrets
-
+def load_topics_from_file(file_path="ai_topics.txt"):
+    """Load topics from a text file, one topic per line."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            topics = [line.strip() for line in f if line.strip()]
+        return topics
+    except FileNotFoundError:
+        print(f"Warning: {file_path} not found. Using default topics.")
+        return ['machine learning', 'artificial intelligence', 'deep learning']
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}. Using default topics.")
+        return ['machine learning', 'artificial intelligence', 'deep learning']
+topics = load_topics_from_file()
 # Third batch of AI-related topics
 AI_TOPICS = [
     "artificial intelligence",
@@ -263,8 +275,8 @@ def fetch_semanticscholar_batch_to_cosmos_multi_topic(topics=None, papers_per_to
 
 if __name__ == "__main__":
     fetch_semanticscholar_batch_to_cosmos_multi_topic(
-        topics=AI_TOPICS,  # Use all AI topics, or pass custom list
-        papers_per_topic=400,  # Fetch up to 400 papers per topic
-        year_range=('01-2025', '09-2025'),
-        container_name="s_scholar_container"
+        topics=topics,  # Use all AI topics, or pass custom list
+        papers_per_topic=100,  # Fetch up to 400 papers per topic
+        year_range=('01-2023', '09-2023'),
+        container_name="baseline-papers-23"
     )
