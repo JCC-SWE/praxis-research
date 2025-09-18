@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'azure_resources'))
 from keyvault_client import get_secrets
 from azure.storage.blob import BlobServiceClient
+import pandas as pd
 
 def upload_qwen_model(model_path, model_version="qwen-2.5-3b"):
     """

@@ -13,7 +13,19 @@ parent_dir = os.path.dirname(current_dir)
 cosmos_util_path = os.path.join(parent_dir, 'azure_resources')
 sys.path.insert(0, cosmos_util_path)
 from cosmos_util import CosmosDB
-
+def load_topics_from_file(file_path="ai_topics.txt"):
+    """Load topics from a text file, one topic per line."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            topics = [line.strip() for line in f if line.strip()]
+        return topics
+    except FileNotFoundError:
+        print(f"Warning: {file_path} not found. Using default topics.")
+        return ['machine learning', 'artificial intelligence', 'deep learning']
+    except Exception as e:
+        print(f"Error reading {file_path}: {e}. Using default topics.")
+        return ['machine learning', 'artificial intelligence', 'deep learning']
+topics = load_topics_from_file()
 # Comprehensive AI-related topics
 AI_TOPICS = [
     # AI Hardware & Architecture
@@ -183,10 +195,11 @@ def batch_get_arxiv_to_cosmos_multi_topic(topics=None, papers_per_topic=500, bat
 
 if __name__ == "__main__":
     batch_get_arxiv_to_cosmos_multi_topic(
-        topics=AI_TOPICS,  # Use all AI topics, or pass custom list
+        topics=topics,  # Use all AI topics, or pass custom list
         papers_per_topic=400,  # Fetch up to 400 papers per topic
         batch_size=100,
-        container_name="s_scholar_container",
-        start_date="2025-01-01",
-        end_date="2025-07-31"
+        container_name="baseline-papers-23",
+        start_date="2023-01-01",
+        end_date="2023-09-30"
     )
+    
