@@ -65,31 +65,18 @@ def _save_json(obj: dict, path: Path) -> None:
 # Model load
 # -------------------------------------------------------------------
 def load_qwen(model_name: str = "qwen-2.5-3b", local_path: str = "/workspace/praxis-research/base-model"):
-    from transformers import AutoModel, AutoTokenizer
-    from pathlib import Path
+    logger.info(f"Loading model: {model_name}")
     
-    logger.info(f"Loading model from storage: {model_name}")
-    
-    # Download model from blob storage
-    model_path = get_qwen_model()
-    
-    if model_path is None:
-        logger.error(f"Failed to download model {model_name}")
-        raise Exception(f"Failed to download model {model_name} from storage")
-    
-    logger.info(f"Model downloaded to: {model_path}")
-    
-    # Load model and tokenizer from local path
-    logger.info(f"Loading model/tokenizer from: {model_path}")
-    tok = AutoTokenizer.from_pretrained(model_path)
-    mdl = AutoModel.from_pretrained(model_path)
-    
-    if tok.pad_token is None:
-        tok.pad_token = tok.eos_token
-    
-    logger.info(f"Successfully loaded model {model_name}")
-    return mdl, tok
-
+    try:
+        # Use get_qwen_model which handles caching and downloading
+        mdl, tok = get_qwen_model(model_version=model_name, cache_dir=local_path)
+        
+        logger.info(f"Successfully loaded model {model_name}")
+        return mdl, tok
+        
+    except Exception as e:
+        logger.error(f"Failed to load model {model_name}: {e}")
+        raise
 
 # -------------------------------------------------------------------
 # Embedding utilities
