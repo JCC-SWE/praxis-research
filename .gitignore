@@ -1,4 +1,4 @@
-# model/cache artifacts (never commit)
+# Model files and directories
 phase1_model_instantiation/models/
 **/models/
 **/checkpoints/
@@ -11,8 +11,11 @@ phase1_model_instantiation/models/
 *.pth
 *.ckpt
 base-model/
-data/qwen_processed_data.pkl
-data/qwen_processed_data.pkl
+
+# Data files
 data/qwen_processed_data.pkl
 .env
 
+# AI adaptation directories
+ai_dapt_checkpoints/
+ai_dapt_final_89percent/
