@@ -384,4 +384,24 @@ def save_baseline_results(results: Dict, save_path: str = "./results/baseline_pe
         json.dump(results, f, indent=2)
     logger.info(f"Baseline results saved to {p}")
     return p
-
+    
+def compute_simple_baselines(qa_pairs: List[Dict[str, str]]) -> Dict:
+    """Compute non-learning baselines for comparison."""
+    questions = [qa["question"] for qa in qa_pairs]
+    truths = [qa["answer"] for qa in qa_pairs]
+    
+    # Random baseline
+    random_preds = ["random response" for _ in questions]
+    random_f1 = np.mean([_f1_score_text(p, t) for p, t in zip(random_preds, truths)])
+    
+    # Most frequent answer baseline
+    answer_counts = Counter([qa["answer"] for qa in qa_pairs])
+    most_frequent = answer_counts.most_common(1)[0][0]
+    freq_preds = [most_frequent for _ in questions]
+    freq_f1 = np.mean([_f1_score_text(p, t) for p, t in zip(freq_preds, truths)])
+    
+    return {
+        "random_f1": random_f1,
+        "frequency_f1": freq_f1,
+        "model_f1": 0.126  # your baseline
+    }
