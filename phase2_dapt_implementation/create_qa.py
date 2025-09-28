@@ -49,13 +49,14 @@ def generate_qa_pairs(papers):
     for paper in papers:
         prompt = f"""Based on this research paper abstract, generate one clear, specific question and its answer.
 
-Abstract: {paper['abstract']}
+        Title: {paper['title']}
+        Abstract: {paper['abstract']}
 
-Format your response as:
-Question: [your question]
-Answer: [your answer]
+        Format your response as:
+        Question: In the paper {paper['title']}, [your question]
+        Answer: [your answer]
 
-Make the question specific to the research findings or methodology described in the abstract."""
+        Make the question specific to the research findings or methodology described in the abstract."""
 
         try:
             response = gpt.ask(prompt, max_tokens=500, temperature=0.7)
@@ -90,10 +91,10 @@ def save_qa_to_blob(qa_pairs):
     """Save Q&A pairs to qa.txt in blob storage"""
     content = json.dumps(qa_pairs, indent=2)
     
-    success = upload_to_blob(content, "qa.txt")
+    success = upload_to_blob(content, "qa-2025.txt")
     
     if success:
-        print(f"Saved {len(qa_pairs)} Q&A pairs to qa.txt")
+        print(f"Saved {len(qa_pairs)} Q&A pairs to qa-2025.txt")
     else:
         print("Failed to save Q&A pairs to blob")
     
