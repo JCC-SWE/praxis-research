@@ -7,7 +7,24 @@
 import os
 import sys
 from datetime import datetime as dt
+import os
+import sys
+from datetime import datetime as dt
+import os, sys
 
+def find_project_root(start, markers=("pyproject.toml", ".git", "README.md")):
+    cur = os.path.abspath(start)
+    while True:
+        if any(os.path.exists(os.path.join(cur, m)) for m in markers):
+            return cur
+        nxt = os.path.dirname(cur)
+        if nxt == cur:
+            return None
+        cur = nxt
+
+PROJECT_ROOT = find_project_root(__file__)
+if PROJECT_ROOT and PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 # Add paths for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -22,7 +39,7 @@ from keyvault_client import get_secrets
 from upload_to_blob import upload_to_blob
 from download_from_blob import download_blob
 
-def get_papers(limit=10):
+def get_papers(limit=200):
     """Get papers from Cosmos DB"""
     # Get secrets first like in your working example
     secrets = get_secrets()
@@ -76,19 +93,19 @@ def save_abstracts_to_blob(abstracts_data):
     
     return success
 
-def get_abstracts_from_blob():
-    """Download abstracts.txt from blob storage for GPT processing"""
+def get_abstracts_from_blob(data='abstracts.txt'):
+    """Download abstracts-23.txt from blob storage for GPT processing"""
         
-    content = download_blob("abstracts.txt")
+    content = download_blob(data)
     
     if content:
-        print(f"Downloaded abstracts.txt ({len(content)} characters)")
+        print(f"Downloaded {data} ({len(content)} characters)")
         return content
     else:
-        print("Failed to download abstracts.txt or file is empty")
+        print(f"Failed to download {data} or file is empty")
         return ""
     
-def process_papers_to_blob(limit=10):
+def process_papers_to_blob(limit=200):
     """
     Get papers from Cosmos DB, extract abstracts, and save to blob storage
     
@@ -121,3 +138,6 @@ def process_papers_to_blob(limit=10):
     except Exception as e:
         print(f"Error in process_papers_to_blob: {e}")
         return False
+    
+if __name__ == "__main__":
+    process_papers_to_blob(limit=200)
