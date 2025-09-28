@@ -1,5 +1,10 @@
 {
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python-envs.pythonProjects": [],
-  "python.analysis.extraPaths": ["./azure_resources"]
+  "python.analysis.extraPaths": [
+    "./azure_resources",
+    "./blob_interface",
+    "./phase2_dapt_implementation",
+    "./phase1_model_instantiation"
+  ]
 }
