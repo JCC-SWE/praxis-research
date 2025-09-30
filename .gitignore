@@ -19,3 +19,4 @@ data/qwen_processed_data.pkl
 # AI adaptation directories
 ai_dapt_checkpoints/
 ai_dapt_final_89percent/
+fuckup_dapt/
