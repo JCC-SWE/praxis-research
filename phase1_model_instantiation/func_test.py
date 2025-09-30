@@ -19,7 +19,7 @@ warnings.filterwarnings(
 def _build_chat_prompt(tokenizer, user_text: str, system_text: str = "You are a helpful AI assistant."):
     """
     Build a prompt compatible with Qwen Instruct. If the tokenizer supports
-    apply_chat_template, we’ll use it. Otherwise, fall back to a simple prefix.
+    apply_chat_template, we'll use it. Otherwise, fall back to a simple prefix.
     """
     messages = [
         {"role": "system", "content": system_text},
@@ -34,50 +34,64 @@ def _build_chat_prompt(tokenizer, user_text: str, system_text: str = "You are a 
     # Fallback format
     return f"{system_text}\n\nUser: {user_text}\nAssistant:"
 
-def generate_reply(model, tokenizer, prompt: str, max_new_tokens: int = 256):
+def generate_reply(model, tokenizer, prompt: str, max_new_tokens: int = 256, device=None):
     """
     Deterministic generation for QA/chat testing. Returns only the new text.
     """
-    device = next(model.parameters()).device
+    # Cache device to avoid repeated parameter iteration
+    if device is None:
+        device = next(model.parameters()).device
+    
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
-
+    
     with torch.no_grad():
         outputs = model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=False,          # deterministic
-            temperature=0.5,          # ignored when do_sample=False
-            top_p=1.0,
+
+            # Removed temperature and top_p since they're ignored with do_sample=False
+
             pad_token_id=tokenizer.pad_token_id,
             eos_token_id=tokenizer.eos_token_id,
         )
-
+    
     # Only decode newly generated tokens
-    gen_tokens = outputs[:, inputs["input_ids"].shape[1]:]
+    input_length = inputs["input_ids"].shape[1]
+    gen_tokens = outputs[:, input_length:]
     text = tokenizer.batch_decode(gen_tokens, skip_special_tokens=True)[0].strip()
     return text
 
 def chat_loop(model, tokenizer, system_text: str, max_new_tokens: int):
+    """
+    Interactive chat loop with optimizations for repeated use.
+    """
+    # Cache device once at the beginning
+    device = next(model.parameters()).device
+    
     print("\nInteractive QA/chat with Qwen. Type 'exit' or 'quit' to stop.")
+    
     while True:
         try:
             user_text = input("\nYou: ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
+            
         if user_text.lower() in {"exit", "quit"}:
             print("Goodbye!")
             break
+            
         if not user_text:
             continue
-
+            
         prompt = _build_chat_prompt(tokenizer, user_text, system_text=system_text)
-        reply = generate_reply(model, tokenizer, prompt, max_new_tokens=max_new_tokens)
+        reply = generate_reply(model, tokenizer, prompt, max_new_tokens=max_new_tokens, device=device)
         print(f"Qwen: {reply}")
 
 # ---- MAIN (run this file directly to chat) ----
 if __name__ == "__main__":
-    from model_setup import load_qwen_model, get_model_info  # uses your existing wrapper
+    from model_setup import get_qwen_model # uses your existing wrapper
 
     parser = argparse.ArgumentParser(description="Quick interactive QA/chat with Qwen.")
     parser.add_argument("--model", type=str, default="Qwen/Qwen2.5-3B-Instruct", help="HF model id or local path")
@@ -88,14 +102,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load model/tokenizer with your wrapper (eval mode, left padding, pad/eos set)
-    model, tokenizer = load_qwen_model(
-        model_name=args.model,
-        device=args.device,
-        dtype=args.dtype,
-    )
-    info = get_model_info(model)
-    print(f"Loaded {args.model} on device (CUDA avail={info['is_cuda_available']}), dtype={info['dtype']}.")
-    print(f"Parameters: {info['total_parameters']:,}\n")
+    model_path = "/workspace/praxis-research/base-model/qwen-2.5-3b/cache/models--Qwen--Qwen2.5-3B-Instruct/snapshots/aa8e72537993ba99e69dfaafa59ed015b17504d1"
+    model, tokenizer = get_qwen_model(model_path)
+    
 
     # Start interactive chat
     chat_loop(model, tokenizer, system_text=args.system, max_new_tokens=args.max_new_tokens)
