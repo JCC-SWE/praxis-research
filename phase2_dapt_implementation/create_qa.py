@@ -47,19 +47,29 @@ def generate_qa_pairs(papers):
     qa_pairs = []
     
     for paper in papers:
-        prompt = f"""Based on this research paper abstract, generate one clear, specific question and its answer.
+        prompt = f"""Based on this research paper abstract, generate one insightful question and answer pair.
 
         Title: {paper['title']}
         Abstract: {paper['abstract']}
 
-        Format your response as:
-        Question: In the paper {paper['title']}, [your question]
-        Answer: [your answer]
+        Create a question about ONE of these aspects:
+        - A specific methodology and how it was applied
+        - A key finding and its implications
+        - A novel contribution and why it matters
+        - Results or performance metrics achieved
 
-        Make the question specific to the research findings or methodology described in the abstract."""
+        Your answer should:
+        - Be 3-5 sentences explaining the concept in depth
+        - Provide context and significance, not just facts
+        - Avoid bullet points or simple lists
+        - Explain the "why" or "how" behind the approach
+
+        Format:
+        Question: In the paper {paper['title']}, [specific question]
+        Answer: [detailed, explanatory answer]"""
 
         try:
-            response = gpt.ask(prompt, max_tokens=500, temperature=0.7)
+            response = gpt.ask(prompt, max_tokens=1000, temperature=0.5)
             
             # Parse the response to extract question and answer
             question = ""

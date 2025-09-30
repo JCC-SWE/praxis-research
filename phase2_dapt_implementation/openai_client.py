@@ -13,7 +13,7 @@ class GPT:
         self.client = OpenAI(api_key=api_key)
         self.model = model
     
-    def ask(self, prompt, max_tokens=150, temperature=0.7):
+    def ask(self, prompt, max_tokens=500, temperature=0.7):
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
