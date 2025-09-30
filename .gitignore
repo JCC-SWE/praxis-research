@@ -20,3 +20,4 @@ data/qwen_processed_data.pkl
 ai_dapt_checkpoints/
 ai_dapt_final_89percent/
 fuckup_dapt/
+venv/
