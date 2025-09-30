@@ -1,3 +1,4 @@
+
 def compute_metrics_batch(predictions, ground_truths):
     """Compute all metrics for a batch"""
     # F1 scores
@@ -31,6 +32,7 @@ warnings.filterwarnings("ignore")
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 logging.getLogger().setLevel(logging.ERROR)
 
+
 def find_project_root(start, markers=("pyproject.toml", ".git", "README.md")):
     cur = os.path.abspath(start)
     while True:
@@ -44,7 +46,6 @@ def find_project_root(start, markers=("pyproject.toml", ".git", "README.md")):
 PROJECT_ROOT = find_project_root(__file__)
 if PROJECT_ROOT and PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
-
 # Add paths for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(os.path.dirname(current_dir))
@@ -52,6 +53,7 @@ azure_path = os.path.join(parent_dir, 'azure_resources')
 blob_path = os.path.join(parent_dir, 'blob_interface')
 sys.path.insert(0, azure_path)
 sys.path.insert(0, blob_path)
+
 
 # Import everything
 try:
@@ -163,6 +165,7 @@ if __name__ == "__main__":
     questions = []
     
     batch_size = 50
+
     
     for i, qa_pair in enumerate(qa_data):
         question = qa_pair['question']
