@@ -19,3 +19,24 @@ data/qwen_processed_data.pkl
 # AI adaptation directories
 ai_dapt_checkpoints/
 ai_dapt_final_89percent/
+fuckup_dapt/
+venv/
+.ipynb_checkpoints/
+.ipynb_aml_checkpoints/
+.ipynb_checkpoints/
+.ipynb_aml_checkpoints/
+**/.ipynb_checkpoints/
+**/.ipynb_aml_checkpoints/
+venv/
+*.safetensors
+*.pt
+*.pth
+*.bin
+*.pkl
+ai_dapt_*/
+*_dapt/
+base-model/
+data/*.pkl
+__pycache__/
+.ipynb_checkpoints/
+.ipynb_aml_checkpoints/

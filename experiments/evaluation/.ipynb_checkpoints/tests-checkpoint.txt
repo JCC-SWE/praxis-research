@@ -1,0 +1,30 @@
+Intrinsic (Model-Centric)
+1.	Loss / Cross-Entropy – Average token prediction error on validation text.
+2.	Perplexity (PPL) – Standard language model fluency metric.
+3.	Next-Token Accuracy – % of tokens correctly predicted.
+4.	Embedding Similarity (Cosine, Euclidean) – Compare embedding spaces pre/post fine-tune.
+5.	Distribution Divergence – KL, Jensen–Shannon (JS), or Wasserstein distance between base vs. domain data embeddings.
+Extrinsic (Task-Centric: Q&A, Abstract → Question/Answer)
+6.	Exact Match (EM) – % of answers exactly matching ground truth.
+7.	F1 Score – Token-level overlap between generated vs. reference answers.
+8.	ROUGE (ROUGE-L, ROUGE-2) – Recall-oriented, good for abstractive answers.
+9.	BLEU – Precision-oriented, checks n-gram overlap.
+10.	METEOR / BERTScore – Embedding-based semantic similarity.
+11.	Human Evaluation (Likert or rubric scoring) – Correctness, relevance, fluency.
+Reasoning & Robustness
+12.	Logical Consistency – Whether answers remain self-consistent across paraphrased questions.
+13.	Hallucination Rate – % of outputs containing unsupported or fabricated content.
+14.	Calibration Metrics (ECE / Brier Score) – Confidence vs. correctness alignment.
+15.	Multi-hop Reasoning Accuracy – Performance on multi-step Q&A samples.
+Efficiency & Practicality
+16.	Latency (ms/token) – Generation speed.
+17.	Throughput (tokens/sec) – Useful for scaling tests.
+18.	Memory Utilization (VRAM, CPU RAM) – Track footprint during inference.
+19.	Energy / Compute Cost Estimate – Optional but useful for research papers.
+
+
+model_path = "/workspace/praxis-research/base-model/qwen-2.5-3b/cache/models--Qwen--Qwen2.5-3B-Instruct/snapshots/aa8e72537993ba99e69dfaafa59ed015b17504d1"
+model_, tokenizer = get_qwen_model(model_path)
+
+get_qwen_model(model_version="qwen-2.5-3b", cache_dir="/workspace/praxis-research/base-model")
+
