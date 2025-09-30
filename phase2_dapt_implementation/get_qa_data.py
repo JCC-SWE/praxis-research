@@ -39,7 +39,7 @@ from keyvault_client import get_secrets
 from upload_to_blob import upload_to_blob
 from download_from_blob import download_blob
 
-def get_papers(limit=200):
+def get_papers(limit=50):
     """Get papers from Cosmos DB"""
     # Get secrets first like in your working example
     secrets = get_secrets()
@@ -114,7 +114,7 @@ def get_abstracts_from_blob(data='abstracts.txt'):
         print(f"Failed to download {data} or file is empty")
         return ""
     
-def process_papers_to_blob(limit=200):
+def process_papers_to_blob(limit=50):
     """
     Get papers from Cosmos DB, extract abstracts, and save to blob storage
     
@@ -149,4 +149,4 @@ def process_papers_to_blob(limit=200):
         return False
     
 if __name__ == "__main__":
-    process_papers_to_blob(limit=200)
+    process_papers_to_blob(limit=50)

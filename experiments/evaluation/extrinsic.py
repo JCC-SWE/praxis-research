@@ -54,7 +54,6 @@ blob_path = os.path.join(parent_dir, 'blob_interface')
 sys.path.insert(0, azure_path)
 sys.path.insert(0, blob_path)
 
-
 # Import everything
 try:
     from upload_to_blob import upload_to_blob
@@ -95,6 +94,69 @@ def compute_f1_score(prediction, ground_truth):
 
 
 
+# def save_results_to_csv(results, filename):
+#     """Save results to CSV and upload to blob"""
+#     # Save locally first
+#     with open(filename, 'w', newline='', encoding='utf-8') as f:
+#         writer = csv.DictWriter(f, fieldnames=results[0].keys())
+#         writer.writeheader()
+#         writer.writerows(results)
+    
+#     # Upload to blob
+#     try:
+#         blob_path = f"evaluation_results/{filename}"
+#         upload_to_blob(filename, blob_path)
+#         print(f"Results uploaded to blob: {blob_path}")
+#     except Exception as e:
+#         print(f"Failed to upload to blob: {e}")
+#         print(f"Results saved locally: {filename}")
+
+# def print_summary_stats(results):
+#     """Print summary statistics"""
+#     metrics = ['f1_score', 'rouge_score', 'bleu_score']
+    
+#     print("\n" + "="*50)
+#     print("EVALUATION SUMMARY") 
+#     print("="*50)
+    
+#     for metric in metrics:
+#         values = [r[metric] for r in results]
+#         avg_score = sum(values) / len(values)
+#         print(f"{metric.upper()}: {avg_score:.4f}")
+    
+#     print(f"\nTotal QA pairs evaluated: {len(results)}")
+#     print("="*50)
+
+import torch
+
+def compute_perplexity(model, tokenizer, text):
+    """
+    Compute perplexity for a given text.
+    
+    Args:
+        model: Your Qwen model (already loaded)
+        tokenizer: Your Qwen tokenizer (already loaded)
+        text: String to compute perplexity on (question, answer, or Q+A concatenated)
+    
+    Returns:
+        float: Perplexity score
+    """
+    device = next(model.parameters()).device
+    
+    # Tokenize
+    encodings = tokenizer(text, return_tensors='pt', truncation=True, max_length=512)
+    input_ids = encodings.input_ids.to(device)
+    
+    # Get model outputs
+    with torch.no_grad():
+        outputs = model(input_ids, labels=input_ids)
+        loss = outputs.loss
+    
+    # Perplexity is exp(loss)
+    perplexity = torch.exp(loss).item()
+    
+    return perplexity
+
 def save_results_to_csv(results, filename):
     """Save results to CSV and upload to blob"""
     # Save locally first
@@ -114,32 +176,28 @@ def save_results_to_csv(results, filename):
 
 def print_summary_stats(results):
     """Print summary statistics"""
-    metrics = ['f1_score', 'rouge_score', 'bleu_score']
-    
     print("\n" + "="*50)
     print("EVALUATION SUMMARY") 
     print("="*50)
     
-    for metric in metrics:
-        values = [r[metric] for r in results]
-        avg_score = sum(values) / len(values)
-        print(f"{metric.upper()}: {avg_score:.4f}")
+    perplexities = [r['perplexity'] for r in results]
+    avg_perplexity = sum(perplexities) / len(perplexities)
+    print(f"AVERAGE PERPLEXITY: {avg_perplexity:.4f}")
+    print(f"MIN PERPLEXITY: {min(perplexities):.4f}")
+    print(f"MAX PERPLEXITY: {max(perplexities):.4f}")
     
     print(f"\nTotal QA pairs evaluated: {len(results)}")
     print("="*50)
 
 if __name__ == "__main__":
-    print("Starting optimized QA evaluation...")
+    print("Starting perplexity evaluation...")
+
     
     # Load everything once at startup
     data_2023 = pull_qa_texts(data='qa-2023.txt')
     #data_2025 = pull_qa_texts(data='qa-2025.txt')
     model_path = "/workspace/praxis-research/base-model/qwen-2.5-3b/cache/models--Qwen--Qwen2.5-3B-Instruct/snapshots/aa8e72537993ba99e69dfaafa59ed015b17504d1"
     model, tokenizer = get_qwen_model(model_path)
-    
-    # Pre-setup for faster generation
-    device = next(model.parameters()).device
-    system_text = "You are a helpful AI assistant."
     
     # Choose which dataset to evaluate (change this as needed)
     qa_data = data_2023  # or data_2025
@@ -149,23 +207,14 @@ if __name__ == "__main__":
         qa_data = qa_data.decode("utf-8")
     if isinstance(qa_data, str):
         qa_data = json.loads(qa_data)
-    
-    # Load metrics once
-    print("Loading evaluation metrics...")
-    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-        rouge_metric = evaluate.load("rouge")
-        bleu_metric = evaluate.load("bleu")
-    
-    print(f"Evaluating on {len(qa_data)} QA pairs...")
-    
-    # Main optimized loop - everything in main, no function calls
+   
+    print(f"Evaluating perplexity on {len(qa_data)} QA pairs...")    
     results = []
     predictions = []
     ground_truths = []
     questions = []
     
     batch_size = 50
-
     
     for i, qa_pair in enumerate(qa_data):
         question = qa_pair['question']
@@ -177,41 +226,23 @@ if __name__ == "__main__":
             prediction = generate_reply(model, tokenizer, prompt)
         except Exception as e:
             prediction = f"Error: {str(e)[:50]}"
+
+        print(f'On the {i}th iteration')
         
-        # Store for batch processing
-        questions.append(question)
-        predictions.append(prediction)
-        ground_truths.append(ground_truth)
+        # Compute perplexity on question+answer
+        full_text = f"Question: {question}\nAnswer: {ground_truth}"
+        perplexity = compute_perplexity(model, tokenizer, full_text)
         
-        # Process batch when full or at end
-        if len(predictions) == batch_size or i == len(qa_data) - 1:
-            print(f'Processing batch ending at QA pair {i+1}/{len(qa_data)}')
-            
-            # Compute metrics for this batch
-            f1_scores, rouge_scores, bleu_scores = compute_metrics_batch(predictions, ground_truths)
-            
-            # Add to results
-            batch_start = i - len(predictions) + 1
-            for j in range(len(predictions)):
-                results.append({
-                    'qa_id': batch_start + j + 1,
-                    'question': questions[j],
-                    'prediction': predictions[j],
-                    'ground_truth': ground_truths[j],
-                    'f1_score': f1_scores[j],
-                    'rouge_score': rouge_scores[j] if j < len(rouge_scores) else 0.0,
-                    'bleu_score': bleu_scores[j] if j < len(bleu_scores) else 0.0
-                })
-            
-            # Clear batch
-            predictions = []
-            ground_truths = []
-            questions = []
+        results.append({
+            'qa_id': i + 1,
+            'question': question,
+            'ground_truth': ground_truth,
+            'perplexity': perplexity
+        })
     
     # Save and summarize
     timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"qa_evaluation_results_{timestamp}.csv"
-    
+    output_file = f"qa_perplexity_results_{timestamp}.csv"    
     save_results_to_csv(results, output_file)
     print_summary_stats(results)
     print(f"Results saved to {output_file}")
