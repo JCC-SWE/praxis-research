@@ -49,7 +49,9 @@ def generate_reply(model, tokenizer, prompt: str, max_new_tokens: int = 256, dev
             **inputs,
             max_new_tokens=max_new_tokens,
             do_sample=False,          # deterministic
+
             # Removed temperature and top_p since they're ignored with do_sample=False
+
             pad_token_id=tokenizer.pad_token_id,
             eos_token_id=tokenizer.eos_token_id,
         )

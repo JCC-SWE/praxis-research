@@ -93,7 +93,9 @@ def save_abstracts_to_blob(abstracts_data):
     
     return success
 
+
 import json
+
 
 def get_abstracts_from_blob(data='abstracts.txt'):
     """Download abstracts-23.txt from blob storage for GPT processing"""
@@ -102,9 +104,11 @@ def get_abstracts_from_blob(data='abstracts.txt'):
     
     if content:
         print(f"Downloaded {data} ({len(content)} characters)")
+
         # Parse JSON if it's a .txt file containing JSON
         if data.endswith('.txt') and content.strip().startswith('['):
             return json.loads(content)
+
         return content
     else:
         print(f"Failed to download {data} or file is empty")
