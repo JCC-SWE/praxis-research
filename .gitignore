@@ -43,3 +43,4 @@ __pycache__/
 OPENAI_API_KEY
 .env
 VAULT_URL".env" 
+

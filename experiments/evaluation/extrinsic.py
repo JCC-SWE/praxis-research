@@ -54,7 +54,6 @@ blob_path = os.path.join(parent_dir, 'blob_interface')
 sys.path.insert(0, azure_path)
 sys.path.insert(0, blob_path)
 
-
 # Import everything
 try:
     from upload_to_blob import upload_to_blob
@@ -158,7 +157,6 @@ def compute_perplexity(model, tokenizer, text):
     
     return perplexity
 
-
 def save_results_to_csv(results, filename):
     """Save results to CSV and upload to blob"""
     # Save locally first
@@ -175,7 +173,6 @@ def save_results_to_csv(results, filename):
     except Exception as e:
         print(f"Failed to upload to blob: {e}")
         print(f"Results saved locally: {filename}")
-
 
 def print_summary_stats(results):
     """Print summary statistics"""
@@ -194,6 +191,7 @@ def print_summary_stats(results):
 
 if __name__ == "__main__":
     print("Starting perplexity evaluation...")
+
     
     # Load everything once at startup
     data_2023 = pull_qa_texts(data='qa-2023.txt')
@@ -209,15 +207,26 @@ if __name__ == "__main__":
         qa_data = qa_data.decode("utf-8")
     if isinstance(qa_data, str):
         qa_data = json.loads(qa_data)
-    
-    print(f"Evaluating perplexity on {len(qa_data)} QA pairs...")
-    
+   
+    print(f"Evaluating perplexity on {len(qa_data)} QA pairs...")    
     results = []
+    predictions = []
+    ground_truths = []
+    questions = []
+    
+    batch_size = 50
     
     for i, qa_pair in enumerate(qa_data):
         question = qa_pair['question']
         ground_truth = qa_pair['answer']
-        
+        print(f'On the {i}th iteration')
+        # Generate prediction using original working functions
+        try:
+            prompt = _build_chat_prompt(tokenizer, question)
+            prediction = generate_reply(model, tokenizer, prompt)
+        except Exception as e:
+            prediction = f"Error: {str(e)[:50]}"
+
         print(f'On the {i}th iteration')
         
         # Compute perplexity on question+answer
@@ -233,8 +242,7 @@ if __name__ == "__main__":
     
     # Save and summarize
     timestamp = dt.now().strftime("%Y%m%d_%H%M%S")
-    output_file = f"qa_perplexity_results_{timestamp}.csv"
-    
+    output_file = f"qa_perplexity_results_{timestamp}.csv"    
     save_results_to_csv(results, output_file)
     print_summary_stats(results)
     print(f"Results saved to {output_file}")
