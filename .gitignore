@@ -42,4 +42,4 @@ __pycache__/
 .ipynb_aml_checkpoints/
 OPENAI_API_KEY
 .env
-VAULT_URL
+VAULT_URL".env" 
